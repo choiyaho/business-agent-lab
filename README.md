@@ -1,6 +1,5 @@
 # business-agent-lab
 
-## What I want to build with agents
+## Working with agents
 
-- First Commit
-- Second Commit
+I will use coding agents for drafts and check every change.
