@@ -2,3 +2,9 @@
 .DS
 _
 Store
+/.env
+/.venv/
+
+__pycache
+__
+/
