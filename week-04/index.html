@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4주차 복습 퀴즈</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    background: #f3f4f6;
+    color: #1f2937;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    line-height: 1.6;
+  }
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px 20px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  }
+  h1 { font-size: 1.2rem; margin: 0 0 4px; }
+  .progress { color: #6b7280; font-size: 0.9rem; margin: 0 0 16px; }
+  .question { font-size: 1.05rem; font-weight: 600; margin: 0 0 16px; overflow-wrap: anywhere; }
+  .choices { display: flex; flex-direction: column; gap: 8px; }
+  .choice {
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    font: inherit;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  .choice:hover:not(:disabled) { background: #f9fafb; border-color: #9ca3af; }
+  .choice:disabled { cursor: default; }
+  .choice.correct { background: #dcfce7; border-color: #16a34a; color: #14532d; }
+  .choice.wrong { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
+  .feedback { margin: 16px 0 0; padding: 12px 14px; background: #f3f4f6; border-radius: 8px; overflow-wrap: anywhere; }
+  .feedback strong.ok { color: #15803d; }
+  .feedback strong.no { color: #b91c1c; }
+  .action {
+    margin-top: 16px;
+    padding: 10px 18px;
+    font: inherit;
+    font-weight: 600;
+    color: #fff;
+    background: #2563eb;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .action:hover { background: #1d4ed8; }
+  .score { font-size: 1.4rem; font-weight: 700; margin: 8px 0 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>4주차 복습 퀴즈</h1>
+
+  <section id="quiz">
+    <p class="progress" id="progress"></p>
+    <p class="question" id="question"></p>
+    <div class="choices" id="choices"></div>
+    <div class="feedback" id="feedback" hidden></div>
+    <button class="action" id="next" hidden></button>
+  </section>
+
+  <section id="result" hidden>
+    <p class="score" id="score"></p>
+    <button class="action" id="restart">다시 풀기</button>
+  </section>
+</main>
+
+<script>
+  var QUESTIONS = [
+    {
+      q: "사람은 알지만 아직 에이전트에게 말하지 않은 정보를 공유하는 연산은?",
+      choices: ["Specify", "Elicit", "Acquire", "Decide"],
+      answer: 0,
+      explain: "Specify는 사람이 아는 것을 공유된 정보로 옮긴다."
+    },
+    {
+      q: "\"Think step by step\"(chain-of-thought)은 어떤 연산에 속하나?",
+      choices: ["Specify", "Elicit", "Acquire", "Delegate"],
+      answer: 1,
+      explain: "Elicit은 에이전트가 가진 것을 끌어낸다."
+    },
+    {
+      q: "\"도서관 웹사이트를 확인하고 링크를 달라\"는 요청은 어떤 연산인가?",
+      choices: ["Specify", "Elicit", "Acquire", "Few-shot"],
+      answer: 2,
+      explain: "Acquire는 둘 다 갖지 못한 증거를 검색과 도구로 가져온다."
+    },
+    {
+      q: "7개 질문 중 \"작업이 끝났음을 보여 주는 증거\"를 묻는 것은?",
+      choices: ["Why", "How", "When", "Done"],
+      answer: 3,
+      explain: "Done은 완료를 확인할 증거를 정한다."
+    },
+    {
+      q: "요청 전에 스스로 묻는 세 질문이 아닌 것은?",
+      choices: [
+        "내가 아는 것 중 에이전트에게 필요한 것은?",
+        "에이전트가 보탤 수 있는 것은?",
+        "우리가 확인해야 할 것은?",
+        "에이전트가 가장 빨리 끝내는 방법은?"
+      ],
+      answer: 3,
+      explain: "세 질문은 공유할 정보, 에이전트의 기여, 확인할 것에 관한 것이다."
+    }
+  ];
+  var LETTERS = ["A", "B", "C", "D"];
+
+  var index = 0;
+  var score = 0;
+  var answered = false;
+
+  var quizEl = document.getElementById("quiz");
+  var resultEl = document.getElementById("result");
+  var progressEl = document.getElementById("progress");
+  var questionEl = document.getElementById("question");
+  var choicesEl = document.getElementById("choices");
+  var feedbackEl = document.getElementById("feedback");
+  var nextBtn = document.getElementById("next");
+  var scoreEl = document.getElementById("score");
+
+  function showQuestion() {
+    var item = QUESTIONS[index];
+    answered = false;
+    progressEl.textContent = QUESTIONS.length + "문항 중 " + (index + 1) + "번";
+    questionEl.textContent = "Q" + (index + 1) + ". " + item.q;
+    choicesEl.innerHTML = "";
+    feedbackEl.hidden = true;
+    nextBtn.hidden = true;
+
+    item.choices.forEach(function (text, i) {
+      var btn = document.createElement("button");
+      btn.className = "choice";
+      btn.textContent = "(" + LETTERS[i] + ") " + text;
+      btn.addEventListener("click", function () { choose(i); });
+      choicesEl.appendChild(btn);
+    });
+  }
+
+  function choose(i) {
+    if (answered) return;
+    answered = true;
+    var item = QUESTIONS[index];
+    var buttons = choicesEl.querySelectorAll(".choice");
+    var right = i === item.answer;
+    if (right) score++;
+
+    buttons.forEach(function (b) { b.disabled = true; });
+    buttons[item.answer].classList.add("correct");
+    if (!right) buttons[i].classList.add("wrong");
+
+    feedbackEl.innerHTML = "";
+    var label = document.createElement("strong");
+    label.className = right ? "ok" : "no";
+    label.textContent = right ? "정답입니다. " : "오답입니다. 정답은 (" + LETTERS[item.answer] + ")입니다. ";
+    feedbackEl.appendChild(label);
+    feedbackEl.appendChild(document.createTextNode(item.explain));
+    feedbackEl.hidden = false;
+
+    nextBtn.textContent = index === QUESTIONS.length - 1 ? "결과 보기" : "다음 문항";
+    nextBtn.hidden = false;
+  }
+
+  function showResult() {
+    quizEl.hidden = true;
+    resultEl.hidden = false;
+    scoreEl.textContent = QUESTIONS.length + "점 만점에 " + score + "점";
+  }
+
+  nextBtn.addEventListener("click", function () {
+    if (index === QUESTIONS.length - 1) {
+      showResult();
+    } else {
+      index++;
+      showQuestion();
+    }
+  });
+
+  document.getElementById("restart").addEventListener("click", function () {
+    index = 0;
+    score = 0;
+    resultEl.hidden = true;
+    quizEl.hidden = false;
+    showQuestion();
+  });
+
+  showQuestion();
+</script>
+</body>
+</html>
